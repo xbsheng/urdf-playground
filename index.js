@@ -19,8 +19,11 @@ import {
   CanvasTexture,
   Float32BufferAttribute,
   RepeatWrapping,
+  MeshPhongMaterial,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
+import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js';
 import URDFLoader from 'urdf-loader';
 // 导入控制工具函数
 import { setupKeyboardControls, setupControlPanel } from './robotControls.js';
@@ -30,6 +33,66 @@ let scene, camera, renderer, controls;
 // 将robot设为全局变量，便于其他模块访问
 window.robot = null;
 let keyboardUpdate;
+
+// ---- 大资源（STL/mesh）加载进度提示 ----
+const loadingOverlay = document.getElementById('loadingOverlay');
+const loadingText = document.getElementById('loadingText');
+const loadingBar = document.getElementById('loadingBar');
+
+// 资源路径 -> { loaded, total }，用于按字节数算进度
+const meshBytes = new Map();
+
+function renderProgress(percent, text) {
+  loadingBar.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+  loadingText.textContent = text;
+}
+
+// 按已下载字节数更新；拿不到 Content-Length 时返回 false，由调用方退化为按文件个数
+function showBytesProgress() {
+  let loaded = 0;
+  let total = 0;
+  meshBytes.forEach(b => {
+    loaded += b.loaded;
+    total += b.total;
+  });
+
+  if (!total) return false;
+
+  const percent = Math.round((loaded / total) * 100);
+  const mb = n => (n / 1048576).toFixed(1);
+  renderProgress(percent, `资源加载中 ${mb(loaded)} / ${mb(total)} MB（${percent}%）`);
+  return true;
+}
+
+function showCountProgress(loaded, total) {
+  if (showBytesProgress()) return;
+
+  const percent = total ? Math.round((loaded / total) * 100) : 0;
+  renderProgress(percent, `资源加载中 ${loaded}/${total}（${percent}%）`);
+}
+
+// URDFLoader 默认不透传 mesh 的下载进度，这里补上（与库内 defaultMeshLoader 一致）
+function loadMeshWithProgress(path, manager, onBytes, done) {
+  const onProgress = event => {
+    if (event.lengthComputable) {
+      meshBytes.set(path, { loaded: event.loaded, total: event.total });
+      onBytes();
+    }
+  };
+  const onError = err => done(null, err);
+
+  if (/\.stl$/i.test(path)) {
+    new STLLoader(manager).load(path, geom => done(new Mesh(geom, new MeshPhongMaterial())), onProgress, onError);
+  } else if (/\.dae$/i.test(path)) {
+    new ColladaLoader(manager).load(path, dae => done(dae.scene), onProgress, onError);
+  } else {
+    done(null, new Error(`No loader available for ${path}`));
+  }
+}
+
+function hideLoadingProgress() {
+  loadingOverlay.classList.add('hidden');
+}
 
 init();
 render();
@@ -124,6 +187,13 @@ function init() {
     const manager = new LoadingManager();
     const loader = new URDFLoader(manager);
 
+    manager.onProgress = (url, loaded, total) => showCountProgress(loaded, total);
+    manager.onError = url => {
+      loadingText.textContent = `资源加载失败：${url}`;
+    };
+
+    loader.loadMeshCb = (path, mgr, done) => loadMeshWithProgress(path, mgr, showBytesProgress, done);
+
     loader.load(`/URDF/${modelToLoad}.urdf`, result => {
       window.robot = result;
     });
@@ -150,6 +220,8 @@ function init() {
 
       // Initialize keyboard controls
       keyboardUpdate = setupKeyboardControls(window.robot);
+
+      hideLoadingProgress();
     };
   }
 
