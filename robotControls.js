@@ -208,15 +208,27 @@ export function setupKeyboardControls(robot) {
     }
   };
   
+  // 鼠标/触摸按住的状态与键盘状态分开记录，互不覆盖
+  const pointerState = {};
+
+  const isPressed = key => !!(keyState[key] || pointerState[key]);
+
+  // 高亮由两种输入共同决定
+  const syncKeyVisual = key => {
+    const keyElement = document.querySelector(`.key[data-key="${key}"]`);
+    if (keyElement) {
+      keyElement.classList.toggle('key-pressed', isPressed(key));
+    }
+  };
+
   window.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
     keyState[key] = true;
-    
+
     // Add visual styling to show pressed key
-    const keyElement = document.querySelector(`.key[data-key="${key}"]`);
-    if (keyElement) {
-      keyElement.classList.add('key-pressed');
-      
+    if (document.querySelector(`.key[data-key="${key}"]`)) {
+      syncKeyVisual(key);
+
       // Highlight the keyboard control section
       setKeyboardSectionActive();
     }
@@ -225,13 +237,32 @@ export function setupKeyboardControls(robot) {
   window.addEventListener('keyup', (e) => {
     const key = e.key.toLowerCase();
     keyState[key] = false;
-    
-    // Remove visual styling when key is released
-    const keyElement = document.querySelector(`.key[data-key="${key}"]`);
-    if (keyElement) {
-      keyElement.classList.remove('key-pressed');
-    }
+    syncKeyVisual(key);
   });
+
+  // 加减号可点击：按住等同于按住它标注的那个按键
+  if (keyboardControlSection) {
+    keyboardControlSection.querySelectorAll('.direction-plus, .direction-minus').forEach(symbol => {
+      const key = symbol.previousElementSibling?.dataset?.key;
+      if (!key) return;
+
+      const release = () => {
+        pointerState[key] = false;
+        syncKeyVisual(key);
+        window.removeEventListener('pointerup', release);
+        window.removeEventListener('pointercancel', release);
+      };
+
+      symbol.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        window.addEventListener('pointerup', release);
+        window.addEventListener('pointercancel', release);
+        pointerState[key] = true;
+        syncKeyVisual(key);
+        setKeyboardSectionActive();
+      });
+    });
+  }
 
   // 添加速度控制功能
   if (speedControl) {
@@ -253,9 +284,9 @@ export function setupKeyboardControls(robot) {
 
     let keyPressed = false;
 
-    // 处理每个按键映射
-    Object.keys(keyState).forEach(key => {
-      if (keyState[key] && keyMappings[key]) {
+    // 处理每个按键映射（键盘与鼠标点击状态合并判断）
+    Object.keys(keyMappings).forEach(key => {
+      if (isPressed(key)) {
         keyPressed = true;
         const { jointIndex, direction } = keyMappings[key];
         

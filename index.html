@@ -209,6 +209,24 @@
                 margin-left: 4px;
             }
 
+            /* 加减号可点击：扩大点击区域并给出可点击反馈 */
+            .direction-plus,
+            .direction-minus {
+                margin-left: 0;
+                padding: 2px 6px;
+                border-radius: 4px;
+                cursor: pointer;
+                user-select: none;
+                touch-action: none;
+            }
+
+            .direction-plus:hover,
+            .direction-minus:hover,
+            .direction-plus:active,
+            .direction-minus:active {
+                background: rgba(255, 255, 255, 0.15);
+            }
+
             .control-status {
                 display: flex;
                 align-items: center;
