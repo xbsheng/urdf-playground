@@ -67,7 +67,8 @@
                 align-items: center;
                 justify-content: center;
                 gap: 14px;
-                background: #263238;
+                background: rgba(0, 0, 0, 0.5);
+                backdrop-filter: blur(3px);
                 color: white;
                 font-family: sans-serif;
                 transition: opacity 0.3s ease;
@@ -76,6 +77,14 @@
             .loading-overlay.hidden {
                 opacity: 0;
                 pointer-events: none;
+            }
+
+            .loading-hint {
+                font-size: 13px;
+                opacity: 0.75;
+                max-width: min(360px, 80vw);
+                text-align: center;
+                line-height: 1.6;
             }
 
             .loading-bar-track {
@@ -562,6 +571,8 @@
             <div class="loading-bar-track">
                 <div class="loading-bar" id="loadingBar"></div>
             </div>
+            <div class="loading-hint">首次加载需要下载全部模型文件，资源较多会比较慢</div>
+            <div class="loading-hint">请稍候...</div>
         </div>
 
         <div class="control-panel" id="controlPanel">
