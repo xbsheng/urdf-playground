@@ -240,27 +240,32 @@ export function setupKeyboardControls(robot) {
     syncKeyVisual(key);
   });
 
-  // 加减号可点击：按住等同于按住它标注的那个按键
+  // 按键帽和加减号都支持按住：按住 = 按住对应的键盘键，松开即停
+  const bindPress = (el, key) => {
+    const release = () => {
+      pointerState[key] = false;
+      syncKeyVisual(key);
+      window.removeEventListener('pointerup', release);
+      window.removeEventListener('pointercancel', release);
+    };
+
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      window.addEventListener('pointerup', release);
+      window.addEventListener('pointercancel', release);
+      pointerState[key] = true;
+      syncKeyVisual(key);
+      setKeyboardSectionActive();
+    });
+  };
+
   if (keyboardControlSection) {
+    keyboardControlSection.querySelectorAll('.key[data-key]').forEach(el => bindPress(el, el.dataset.key));
+
+    // 加减号等价于它左边那个键帽
     keyboardControlSection.querySelectorAll('.direction-plus, .direction-minus').forEach(symbol => {
       const key = symbol.previousElementSibling?.dataset?.key;
-      if (!key) return;
-
-      const release = () => {
-        pointerState[key] = false;
-        syncKeyVisual(key);
-        window.removeEventListener('pointerup', release);
-        window.removeEventListener('pointercancel', release);
-      };
-
-      symbol.addEventListener('pointerdown', e => {
-        e.preventDefault();
-        window.addEventListener('pointerup', release);
-        window.addEventListener('pointercancel', release);
-        pointerState[key] = true;
-        syncKeyVisual(key);
-        setKeyboardSectionActive();
-      });
+      if (key) bindPress(symbol, key);
     });
   }
 

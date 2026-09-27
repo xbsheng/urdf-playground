@@ -189,6 +189,13 @@
                 padding: 2px 6px;
                 border-radius: 4px;
                 font-family: monospace;
+                cursor: pointer;
+                user-select: none;
+                touch-action: none;
+            }
+
+            .key:not(.key-pressed):hover {
+                background: rgba(255, 255, 255, 0.35);
             }
 
             .key-pressed {
@@ -650,6 +657,7 @@
                             <div class="joint-name">爪子控制:</div>
                             <div class="joint-keys"><span class="key" data-key="6">6</span> <span class="direction-plus">+</span> <span class="key" data-key="y">Y</span> <span class="direction-minus">-</span></div>
                         </div>
+                        <div class="loading-hint">提示：直接用鼠标点击按键帽或 + / -，同样可以操作（按住持续转动）</div>
                     </div>
                 </div>
 
